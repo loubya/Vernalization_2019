@@ -1,0 +1,125 @@
+---
+title: "Vern_phenotyping_2019"
+output: html_document
+---
+
+# Load the packages:
+```{r, message=F}
+library(readxl)
+library(dplyr)
+
+# for the date data in the excel file
+library(janitor)
+
+#
+library(plyr)
+library(reshape2)
+
+#
+library(ggplot2)
+
+#
+library(emmeans)
+```
+
+
+# Load the data:
+```{r, warning=F}
+pheno_16_8 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
+    sheet = "16-8", col_types = c("text", "text", "numeric", "numeric", "numeric", "numeric", "skip", "skip", "skip"), na = "NA")
+
+pheno_12_12 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
+    sheet = "12-12", col_types = c("text", "text", "numeric", "numeric", "numeric", "numeric", "skip", "skip", "skip"), na = "NA")
+
+
+#Dealing with the date data in the excel file  
+pheno_16_8$Bolting_date <- excel_numeric_to_date(pheno_16_8$Bolting_date)  
+pheno_16_8$Flowering_date <- excel_numeric_to_date(pheno_16_8$Flowering_date)  
+
+pheno_12_12$Bolting_date <- excel_numeric_to_date(pheno_12_12$Bolting_date)  
+pheno_12_12$Flowering_date <- excel_numeric_to_date(pheno_12_12$Flowering_date) 
+
+
+# Calculate days to bolting and flowering
+pheno_16_8$Days_to_bolting = as.numeric(pheno_16_8$Bolting_date) - as.numeric(as.Date('2019-07-9'))
+pheno_16_8$Days_to_flowering = as.numeric(pheno_16_8$Flowering_date) - as.numeric(as.Date('2019-07-9'))
+pheno_12_12$Days_to_bolting = as.numeric(pheno_12_12$Bolting_date) - as.numeric(as.Date('2019-07-9'))
+pheno_12_12$Days_to_flowering = as.numeric(pheno_12_12$Flowering_date) - as.numeric(as.Date('2019-07-9'))
+
+#
+pheno_16_8$Trt <- factor(pheno_16_8$Trt, levels = c("1d", "7d", "22d", "35d", "NA"))
+pheno_12_12$Trt <- factor(pheno_12_12$Trt, levels = c("1d", "7d", "22d", "35d", "NA"))
+```
+
+
+
+# For leaf number: (16/8 day/night cycle)
+```{r}
+leaf_16_8 <- select(pheno_16_8, Genotype, Trt, ends_with("number"))
+#leaf_16_8 <- select(pheno_16_8, Genotype, Trt, ends_with("date"))
+
+# 這邊Dan 為了方便把日期部分的名稱修改了
+colnames(leaf_16_8)[3:4] = c('Rosette_number','Cauline_number')
+#leaf_16_8[,3:4] = log2(leaf_16_8[,3:4])
+#leaf_16_8[,3:4] = 1/(leaf_16_8[,3:4])
+
+
+m_leaf_16_8 <- melt(leaf_16_8, id.vars=c("Genotype", "Trt"))
+summary_leaf_16_8 <- ddply(m_leaf_16_8, c("Genotype", "Trt", "variable"), summarise,
+      mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
+      sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
+
+
+# Standard deviation of the mean as error bar: Rosette leaf
+p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Rosette_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal()
+
+
+# Standard deviation of the mean as error bar: Cauline leaf
+p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Cauline_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal()
+```
+
+
+# For leaf number: (12/12 day/night cycle)
+```{r}
+leaf_12_12 <- select(pheno_12_12, Genotype, Trt, ends_with("number"))
+#leaf_12_12 <- select(pheno_12_12, Genotype, Trt, ends_with("date"))
+colnames(leaf_12_12)[3:4] = c('Rosette_number','Cauline_number')
+#leaf_12_12[,3:4] = log2(leaf_12_12[,3:4])
+#leaf_12_12[,3:4] = 1/(leaf_12_12[,3:4])
+m_leaf_12_12 <- melt(leaf_12_12, id.vars=c("Genotype", "Trt"))
+summary_leaf_12_12 <- ddply(m_leaf_12_12, c("Genotype", "Trt", "variable"), summarise,
+      mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
+      sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
+
+
+# Standard deviation of the mean as error bar: Rosette leaf
+p <- ggplot(summary_leaf_12_12 %>% filter(variable=="Rosette_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal()
+
+
+# Standard deviation of the mean as error bar: Cauline leaf
+p <- ggplot(summary_leaf_12_12 %>% filter(variable=="Cauline_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal()
+
+
+
+ ggplot(summary_leaf_12_12,aes(x=Trt,y=mean)) + geom_point(color='red') + geom_point(data = summary_leaf_16_8,color='black') + facet_grid(Genotype~variable)
+```

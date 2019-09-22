@@ -25,10 +25,10 @@ library(emmeans)
 
 # Load the data:
 ```{r, warning=F}
-pheno_16_8 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
+pheno_16_8 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization_project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
     sheet = "16-8", col_types = c("text", "text", "numeric", "numeric", "numeric", "numeric", "skip", "skip", "skip"), na = "NA")
 
-pheno_12_12 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
+pheno_12_12 <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization_project/Vernalization_project_PKH_part/Phenotyping_201904/Phenotyping.xlsx", 
     sheet = "12-12", col_types = c("text", "text", "numeric", "numeric", "numeric", "numeric", "skip", "skip", "skip"), na = "NA")
 
 
@@ -52,23 +52,23 @@ pheno_12_12$Trt <- factor(pheno_12_12$Trt, levels = c("1d", "7d", "22d", "35d", 
 ```
 
 
-
-# For leaf number: (16/8 day/night cycle)
+# For leaf number: 
 ```{r}
+# (16/8 day/night cycle)
 leaf_16_8 <- select(pheno_16_8, Genotype, Trt, ends_with("number"))
-#leaf_16_8 <- select(pheno_16_8, Genotype, Trt, ends_with("date"))
+leaf_16_8$Total_leaves <- leaf_16_8$Rosette_number + leaf_16_8$Cauline_number
 
-# 這邊Dan 為了方便把日期部分的名稱修改了
-colnames(leaf_16_8)[3:4] = c('Rosette_number','Cauline_number')
-#leaf_16_8[,3:4] = log2(leaf_16_8[,3:4])
-#leaf_16_8[,3:4] = 1/(leaf_16_8[,3:4])
+# Different ways to view the data
+## log2: the differences between the bars = the ratio
+#leaf_16_8[,3:5] = log2(leaf_16_8[,3:5])
+## Reciprocal: The rate (think: 70 leaves to flower = 1 leaf: 1/70 flower)
+#leaf_16_8[,3:5] = 1/(leaf_16_8[,3:5])
 
-
+# re-organize (melt) the data and use ddply to get the mean, SD, and SEM 
 m_leaf_16_8 <- melt(leaf_16_8, id.vars=c("Genotype", "Trt"))
 summary_leaf_16_8 <- ddply(m_leaf_16_8, c("Genotype", "Trt", "variable"), summarise,
       mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
       sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
-
 
 # Standard deviation of the mean as error bar: Rosette leaf
 p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Rosette_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
@@ -76,8 +76,7 @@ p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Rosette_number"), aes(x=Trt,
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                  position=position_dodge(.9))
   
-p + scale_fill_brewer(palette="Paired") + theme_minimal()
-
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Rosette Leaf number") + ggtitle("Rosette Leaf Number under 16/8 h day/night cycles")
 
 # Standard deviation of the mean as error bar: Cauline leaf
 p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Cauline_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
@@ -85,41 +84,229 @@ p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Cauline_number"), aes(x=Trt,
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                  position=position_dodge(.9))
   
-p + scale_fill_brewer(palette="Paired") + theme_minimal()
-```
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Cauline Leaf number") + ggtitle("Cauline Leaf Number under 16/8 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Total leaves
+p <- ggplot(summary_leaf_16_8 %>% filter(variable=="Total_leaves"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Set2") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Total Leaf number") + ggtitle("Total Leaf Number under 16/8 h day/night cycles")
 
 
-# For leaf number: (12/12 day/night cycle)
-```{r}
+######################################
+# (12/12 day/night cycle)
 leaf_12_12 <- select(pheno_12_12, Genotype, Trt, ends_with("number"))
-#leaf_12_12 <- select(pheno_12_12, Genotype, Trt, ends_with("date"))
-colnames(leaf_12_12)[3:4] = c('Rosette_number','Cauline_number')
-#leaf_12_12[,3:4] = log2(leaf_12_12[,3:4])
+leaf_12_12$Total_leaves <- leaf_12_12$Rosette_number + leaf_12_12$Cauline_number
+
+# Different ways to view the data
+#leaf_12_12[,3:5] = log2(leaf_12_12[,3:5])
 #leaf_12_12[,3:4] = 1/(leaf_12_12[,3:4])
+
+# re-organize (melt) the data and use ddply to get the mean, SD, and SEM 
 m_leaf_12_12 <- melt(leaf_12_12, id.vars=c("Genotype", "Trt"))
 summary_leaf_12_12 <- ddply(m_leaf_12_12, c("Genotype", "Trt", "variable"), summarise,
       mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
       sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
-
 
 # Standard deviation of the mean as error bar: Rosette leaf
 p <- ggplot(summary_leaf_12_12 %>% filter(variable=="Rosette_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
    geom_bar(stat="identity", position=position_dodge()) +
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                  position=position_dodge(.9))
-  
-p + scale_fill_brewer(palette="Paired") + theme_minimal()
-
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Rosette Leaf number") + ggtitle("Rosette Leaf Number under 12/12 h day/night cycles")
 
 # Standard deviation of the mean as error bar: Cauline leaf
 p <- ggplot(summary_leaf_12_12 %>% filter(variable=="Cauline_number"), aes(x=Trt, y=mean, fill=Genotype)) + 
    geom_bar(stat="identity", position=position_dodge()) +
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                  position=position_dodge(.9))
+
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Cauline Leaf number") + ggtitle("Cauline Leaf Number under 12/12 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Total leaves
+p <- ggplot(summary_leaf_12_12 %>% filter(variable=="Total_leaves"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
   
-p + scale_fill_brewer(palette="Paired") + theme_minimal()
+p + scale_fill_brewer(palette="Set2") + theme_minimal() + xlab("Treatment") + ylab("Total Leaf number") + ggtitle("Total Leaf Number under 12/12 h day/night cycles")
 
-
-
- ggplot(summary_leaf_12_12,aes(x=Trt,y=mean)) + geom_point(color='red') + geom_point(data = summary_leaf_16_8,color='black') + facet_grid(Genotype~variable)
 ```
+(1) Use the leaf number:
+- The number: 1d < 7d < 22d < 35d
+- The difference between Col and Col-FRI: 1d ~ 7d < 22d < 35d (The later vernalization, the bigger difference between Col and Col-FRI.)
+
+
+(2) Use the 1/leaf number:
+- The number: 1d > 7d > 22d > 35d
+- The difference between Col and Col-FRI: Similar between groups. (The difference of flowering rate remain the same under different treatments.)
+
+
+(3) Use the log2(leaf):
+- The number: 1d < 7d < 22d < 35d
+- The difference between Col and Col-FRI: 1d ~ 7d ~ 22d < 35d. (The difference means Col/Col-FRI.)
+(But what is the biological meaning??? I think it can represent how many times the leaf number of Col does Col-FRI need to flower.)
+
+
+# More analyses on leaf number
+```{r}
+# The differences between Col and Col-FRI:
+m1 = lm(mean~Trt + variable + Genotype:variable:Trt,summary_leaf_16_8)
+# You can compare the results (the mean) of emmeans to the summary tables I made above.
+#emmeans(m1,specs = 'Genotype',by=c('Trt','variable'))
+# This will return a list, so use the as.data.frame to combine the list.
+#pairs(emmeans(m1,specs = 'Genotype',by=c('Trt','variable')))
+as.data.frame(pairs(emmeans(m1,specs = 'Genotype',by=c('Trt','variable'))))
+
+
+# For 12/12 h cycle:
+as.data.frame(pairs(emmeans(lm(mean~Genotype:Trt:variable,summary_leaf_12_12),specs = 'Genotype',by=c('Trt','variable'))))
+
+
+```
+For Total leaves, the difference between Col and Col-FRI:
+(1) 16/8 h > 12/12 h: 1d, 7d, 22d
+(2) 16/8 h < 12/12 h: 35d 
+
+Thus, the effects of LD (16/8) is smaller in 35d trt but bigger in all others. 
+> Does that support Dan's model?
+
+
+# For days to flower:
+```{r}
+# (16/8 day/night cycle)
+days_16_8 <- select(pheno_16_8, Genotype, Trt, starts_with("Days"))
+
+
+# Different ways to view the data
+## log2: the differences between the bars = the ratio
+#days_16_8[,3:4] = log2(days_16_8[,3:4])
+## Reciprocal: The rate (think: 70 leaves to flower = 1 leaf: 1/70 flower)
+#days_16_8[,3:4] = 1/(days_16_8[,3:4])
+
+# re-organize (melt) the data and use ddply to get the mean, SD, and SEM 
+m_days_16_8 <- melt(days_16_8, id.vars=c("Genotype", "Trt"))
+summary_days_16_8 <- ddply(m_days_16_8, c("Genotype", "Trt", "variable"), summarise,
+      mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
+      sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
+
+# Standard deviation of the mean as error bar: Days_to_bolting
+p <- ggplot(summary_days_16_8 %>% filter(variable=="Days_to_bolting"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to bolting under 16/8 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Days_to_flowering
+p <- ggplot(summary_days_16_8 %>% filter(variable=="Days_to_flowering"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to flowering under 16/8 h day/night cycles")
+
+
+######################################
+# (12/12 day/night cycle)
+days_12_12 <- select(pheno_12_12, Genotype, Trt, starts_with("Days"))
+
+
+# Different ways to view the data
+## log2: the differences between the bars = the ratio
+#days_12_12[,3:4] = log2(days_12_12[,3:4])
+## Reciprocal: The rate (think: 70 leaves to flower = 1 leaf: 1/70 flower)
+#days_12_12[,3:4] = 1/(days_12_12[,3:4])
+
+# re-organize (melt) the data and use ddply to get the mean, SD, and SEM 
+m_days_12_12 <- melt(days_12_12, id.vars=c("Genotype", "Trt"))
+summary_days_12_12 <- ddply(m_days_12_12, c("Genotype", "Trt", "variable"), summarise,
+      mean = mean(value, na.rm=TRUE), sd = sd(value, na.rm=TRUE),
+      sem = sd(value, na.rm=TRUE)/sqrt(length(value)))
+
+# Standard deviation of the mean as error bar: Days_to_bolting
+p <- ggplot(summary_days_12_12 %>% filter(variable=="Days_to_bolting"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to bolting under 12/12 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Days_to_flowering
+p <- ggplot(summary_days_12_12 %>% filter(variable=="Days_to_flowering"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to flowering under 12/12 h day/night cycles")
+
+
+```
+
+
+# Exclude the NV trt
+```{r}
+# Standard deviation of the mean as error bar: Days_to_bolting
+p <- ggplot(summary_days_16_8 %>% filter(variable=="Days_to_bolting")%>% subset(Trt != "NA"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to bolting under 16/8 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Days_to_flowering
+p <- ggplot(summary_days_16_8 %>% filter(variable=="Days_to_flowering") %>% subset(Trt != "NA"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to flowering under 16/8 h day/night cycles")
+
+##################################################################
+# Standard deviation of the mean as error bar: Days_to_bolting
+p <- ggplot(summary_days_12_12 %>% filter(variable=="Days_to_bolting") %>% subset(Trt != "NA"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to bolting under 12/12 h day/night cycles")
+
+# Standard deviation of the mean as error bar: Days_to_flowering
+p <- ggplot(summary_days_12_12 %>% filter(variable=="Days_to_flowering") %>% subset(Trt != "NA"), aes(x=Trt, y=mean, fill=Genotype)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+  
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + theme_minimal() + xlab("Treatment") + ylab("Days") + ggtitle("Days to flowering under 12/12 h day/night cycles")
+
+```
+
+
+# Comparing the 12/12-h and 16/8-h conditions:
+```{r}
+ggplot(summary_leaf_12_12,aes(x=Trt,y=mean)) + geom_point(color='red') + geom_point(data = summary_leaf_16_8,color='black') + facet_grid(Genotype~variable)
+
+# Different code, the same result:
+#ggplot(summary_leaf_12_12,aes(x=Trt,y=mean)) + geom_point(color='red') + facet_wrap(Genotype~variable) + geom_point(data=summary_leaf_16_8,color='blue')
+
+ggplot(summary_days_12_12,aes(x=Trt,y=mean)) + geom_point(color='red') + geom_point(data = summary_days_16_8,color='black') + facet_grid(Genotype~variable)
+
+
+```
+
+(1) The NV condition: except for the cauline leaf number, other parameters show the delay of flowering under 12/12-h condition.
+
+(2) The rosette leaf number: Generally, the number of leaves are slightly  higher under 12/12-h than under 16/8-h for both Col and Col-FRI. (But the differences are not very big) 
+
+(3) The total leaf number: Generally, the number of leaves are slightly  higher under 12/12-h than under 16/8-h for both Col and Col-FRI. (But the differences are not very big) 
+
+(4) However, both the rosette and total leaf number are identical under 35d using Col.
+
+(5) The obvious difference between 16/8-h and 12/12-h conditions: Col, 1d; Col-FRI, 1d; Col-FRI, 35d.
+
+(6) The flowering time seems to show more differences: most of the plants under 12/12-h flower later than those under 16/8-h. Photosynthesis?
+
+(7) Interestingly, the NV Col can flower as fast as 1d Col under 16/8-h condition, but even slower than 7d under 12/12-h condition. That means the LD can complement the vern requirement even for Col genotype. Also, even Col is considered as the vernalization-not-required ecotype, it seems the vern can accerate the flowering of Col under 12/12-d condition. Think: the FLC-independent pathway!
+

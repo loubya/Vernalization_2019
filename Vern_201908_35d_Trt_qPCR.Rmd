@@ -1,0 +1,132 @@
+---
+title: "Vern_201908_7d_Trt_qPCR"
+output: html_document
+---
+Include the data generated in 20190819 and 20190831
+
+
+# Load the packages
+```{r, message=FALSE}
+library(readxl)
+library(dplyr)
+library(plyr)
+library(reshape2)
+library(ggplot2)
+```
+
+
+# Load the data from excel
+```{r}
+Raw_data <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization_project/Vernalization_project_PKH_part/qPCR_data/2019_project/201908.xlsx", 
+    sheet = "Raw_data")
+
+Raw_data_1212vern <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization_project/Vernalization_project_PKH_part/qPCR_data/2019_project/20190930_1212vern.xlsx", 
+    sheet = "Raw_data")
+
+
+#
+#UBC <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/qPCR_data/2019_project/20190904.xlsx", sheet = "UBC")
+
+#FT <- read_excel("C:/Users/Po-Kai/Box Sync/Runcie_lab/Vernalization project/Vernalization_project_PKH_part/qPCR_data/2019_project/20190904.xlsx", sheet = "FT")
+
+
+```
+
+
+# dCT and fold change
+```{r}
+#summary_Raw <- ddply(Raw_data, c("Sample_Name","Target_Name"), summarise, mean = mean(CT, na.rm=TRUE))
+
+summary_Raw <- ddply(Raw_data, c("Sample_Name","Target_Name"), summarise,
+      mean = mean(CT, na.rm=TRUE), sd = sd(CT, na.rm=TRUE))
+
+
+FT_UBC <- dcast(summary_Raw, formula = Sample_Name ~ Target_Name, value.var = "mean")
+FT_UBC$dCT <- FT_UBC$FT - FT_UBC$UBC
+FT_UBC$fold_change <- 2^(-(FT_UBC$dCT))
+
+# Add the leaf rank
+FT_UBC$leaf_rank <- factor(c("65", "60", "55", "50","45","40","35","30","25","65", "60", "55", "50","45","40","35","30","25","20","70","65", "60", "55", "50","45","40","35","30","25","20"), level=c("20","25","30","35","40","45","50","55","60","65","70"))
+```
+
+
+# Biological replicate
+```{r}
+dCT_final <- ddply(FT_UBC, c("leaf_rank"), summarise,
+      mean = mean(fold_change, na.rm=TRUE), sd = sd(fold_change, na.rm=TRUE))
+
+#ddply(FT_UBC %>% select(c("Sample_Name","dCT","leaf_rank")), c("leaf_rank"), summarise,
+#      mean = mean(dCT, na.rm=TRUE), sd = sd(dCT, na.rm=TRUE))
+
+
+p <- ggplot(dCT_final, aes(x=leaf_rank, y=mean, fill=leaf_rank)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(.9))
+
+p + scale_fill_brewer(palette="Paired") + theme_minimal() + labs(x = "Leaf rank", y = "Relative expression to UBC")
+
+
+```
+However, the bar plot may not be suitable for presenting the data. 
+
+
+```{r}
+# Check where is the boundary of each individual plant:
+FT_UBC$leaf_rankN = as.numeric(as.character(FT_UBC$leaf_rank))
+which(diff(FT_UBC$leaf_rankN)> 0)
+FT_UBC$Sample = c(rep(1,9),rep(2,10),rep(3,11))
+
+
+# Trial and error:
+#ggplot(FT_UBC,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess',span=.3)
+#ggplot(FT_UBC,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess',span=.5)
+
+
+# Convert the "Sample" to factor:
+FT_UBC$Sample = factor(FT_UBC$Sample)
+ggplot(FT_UBC,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess',span=.5)
+
+ggplot(FT_UBC,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess')
+
+
+# Can we pool the data together? Something like:
+ggplot(FT_UBC,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(method='loess',span=.5)
+```
+(1) How to choose the curve?
+-> 20190925, Dan: Use the last one
+
+(2) Why there is CI even for the each biological replicate?
+-> Dan: loess uses several points to generate the curve, so the CI is from the points it uses.
+
+
+20190930: Add the reslts of 12h/12h chamber, 35d
+```{r}
+# dCT and fold change
+summary_Raw_1212 <- ddply(Raw_data_1212vern, c("Sample_Name","Target_Name"), summarise,
+      mean = mean(CT, na.rm=TRUE), sd = sd(CT, na.rm=TRUE))
+
+
+FT_UBC_1212 <- dcast(summary_Raw_1212, formula = Sample_Name ~ Target_Name, value.var = "mean")
+FT_UBC_1212$dCT <- FT_UBC_1212$FT - FT_UBC_1212$UBC
+FT_UBC_1212$fold_change <- 2^(-(FT_UBC_1212$dCT))
+
+# Add the leaf rank
+FT_UBC_1212$leaf_rank <- factor(c("35", "30", "25", "20", seq(from=65, to=20, by=-5), "18", seq(from=70, to=20, by=-5), seq(from=70, to=40, by=-5)))
+
+FT_UBC_1212$leaf_rankN = as.numeric(as.character(FT_UBC_1212$leaf_rank))
+FT_UBC_1212$Sample = c(rep(3,4),rep(1,11),rep(2,11), rep(3,7))
+FT_UBC_1212$Sample = factor(FT_UBC_1212$Sample)
+
+# Plots:
+ggplot(FT_UBC_1212,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess',span=.5)
+
+ggplot(FT_UBC_1212,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(aes(color=Sample,group = Sample),method='loess')
+
+
+# Can we pool the data together? Something like:
+ggplot(FT_UBC_1212,aes(x=leaf_rankN,y=fold_change)) + geom_point(aes(color = Sample)) + geom_smooth(method='loess',span=.5)
+
+
+```
+(1) Anyway to merge two curve together?
